@@ -216,15 +216,15 @@ class AddressResolver(object):
 
 
 def print_addr(name, value, resolver):
-    print("{}:{} {}".format(name, " " * (8 - len(name)), resolver.resolve_addr(value)))
+    print(f"{name + ':':9} {resolver.resolve_addr(value)}")
 
 
 def print_stack_full(lines, resolver):
     print("stack:")
     for line in lines:
-        print(line.offset + ":")
+        print(f"{line.offset}:")
         for content in line.content:
-            print("  " + resolver.resolve_stack_addr(content))
+            print(f"  {resolver.resolve_stack_addr(content)}")
 
 
 def print_stack(lines, resolver):
@@ -232,32 +232,31 @@ def print_stack(lines, resolver):
     for line in lines:
         for content in line.content:
             out = resolver.resolve_stack_addr(content, full=False)
-            if out is None:
-                continue
-            print(out)
+            if out:
+                print(out)
 
 
 def print_result(parser, resolver, full=True, stack_only=False):
     if not stack_only:
         exception_cause = EXCEPTIONS[parser.exception] if parser.exception in EXCEPTIONS else "unknown"
-        print('Exception: {} ({})'.format(parser.exception, exception_cause))
-
+        print(f"Exception: {parser.exception} ({exception_cause})")
         print("")
-        print_addr("epc1", parser.epc1, resolver)
-        print_addr("epc2", parser.epc2, resolver)
-        print_addr("epc3", parser.epc3, resolver)
+
+        print_addr("epc1",     parser.epc1,     resolver)
+        print_addr("epc2",     parser.epc2,     resolver)
+        print_addr("epc3",     parser.epc3,     resolver)
         print_addr("excvaddr", parser.excvaddr, resolver)
-        print_addr("depc", parser.depc, resolver)
-
+        print_addr("depc",     parser.depc,     resolver)
         print("")
-        print("ctx: " + parser.ctx)
 
+        print(f"{'ctx':9} {parser.ctx}")
         print("")
+
         print_addr("sp", parser.sp, resolver)
         print_addr("end", parser.end, resolver)
         print_addr("offset", parser.offset, resolver)
-
         print("")
+
     if full:
         print_stack_full(parser.stack, resolver)
     else:
