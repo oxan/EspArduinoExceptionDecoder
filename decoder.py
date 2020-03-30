@@ -16,38 +16,38 @@ import sys
 
 import os
 
-EXCEPTIONS = [
-    "Illegal instruction",
-    "SYSCALL instruction",
-    "InstructionFetchError: Processor internal physical address or data error during instruction fetch",
-    "LoadStoreError: Processor internal physical address or data error during load or store",
-    "Level1Interrupt: Level-1 interrupt as indicated by set level-1 bits in the INTERRUPT register",
-    "Alloca: MOVSP instruction, if caller's registers are not in the register file",
-    "IntegerDivideByZero: QUOS, QUOU, REMS, or REMU divisor operand is zero",
-    "reserved",
-    "Privileged: Attempt to execute a privileged operation when CRING ? 0",
-    "LoadStoreAlignmentCause: Load or store to an unaligned address",
-    "reserved",
-    "reserved",
-    "InstrPIFDataError: PIF data error during instruction fetch",
-    "LoadStorePIFDataError: Synchronous PIF data error during LoadStore access",
-    "InstrPIFAddrError: PIF address error during instruction fetch",
-    "LoadStorePIFAddrError: Synchronous PIF address error during LoadStore access",
-    "InstTLBMiss: Error during Instruction TLB refill",
-    "InstTLBMultiHit: Multiple instruction TLB entries matched",
-    "InstFetchPrivilege: An instruction fetch referenced a virtual address at a ring level less than CRING",
-    "reserved",
-    "InstFetchProhibited: An instruction fetch referenced a page mapped with an attribute that does not permit instruction fetch",
-    "reserved",
-    "reserved",
-    "reserved",
-    "LoadStoreTLBMiss: Error during TLB refill for a load or store",
-    "LoadStoreTLBMultiHit: Multiple TLB entries matched for a load or store",
-    "LoadStorePrivilege: A load or store referenced a virtual address at a ring level less than CRING",
-    "reserved",
-    "LoadProhibited: A load referenced a page mapped with an attribute that does not permit loads",
-    "StoreProhibited: A store referenced a page mapped with an attribute that does not permit stores"
-]
+EXCEPTIONS = {
+    0:  "Illegal instruction",
+    1:  "SYSCALL instruction",
+    2:  "InstructionFetchError: Processor internal physical address or data error during instruction fetch",
+    3:  "LoadStoreError: Processor internal physical address or data error during load or store",
+    4:  "Level1Interrupt: Level-1 interrupt as indicated by set level-1 bits in the INTERRUPT register",
+    5:  "Alloca: MOVSP instruction, if caller's registers are not in the register file",
+    6:  "IntegerDivideByZero: QUOS, QUOU, REMS, or REMU divisor operand is zero",
+    8:  "Privileged: Attempt to execute a privileged operation when CRING ? 0",
+    9:  "LoadStoreAlignmentCause: Load or store to an unaligned address",
+    12: "InstrPIFDataError: PIF data error during instruction fetch",
+    13: "LoadStorePIFDataError: Synchronous PIF data error during LoadStore access",
+    14: "InstrPIFAddrError: PIF address error during instruction fetch",
+    15: "LoadStorePIFAddrError: Synchronous PIF address error during LoadStore access",
+    16: "InstTLBMiss: Error during Instruction TLB refill",
+    17: "InstTLBMultiHit: Multiple instruction TLB entries matched",
+    18: "InstFetchPrivilege: An instruction fetch referenced a virtual address at a ring level less than CRING",
+    20: "InstFetchProhibited: An instruction fetch referenced a page mapped with an attribute that does not permit instruction fetch",
+    24: "LoadStoreTLBMiss: Error during TLB refill for a load or store",
+    25: "LoadStoreTLBMultiHit: Multiple TLB entries matched for a load or store",
+    26: "LoadStorePrivilege: A load or store referenced a virtual address at a ring level less than CRING",
+    28: "LoadProhibited: A load referenced a page mapped with an attribute that does not permit loads",
+    29: "StoreProhibited: A store referenced a page mapped with an attribute that does not permit stores",
+    32: "Coprocessor 0 instruction when cp0 disabled.",
+    33: "Coprocessor 1 instruction when cp1 disabled.",
+    34: "Coprocessor 2 instruction when cp2 disabled.",
+    35: "Coprocessor 3 instruction when cp3 disabled.",
+    36: "Coprocessor 4 instruction when cp4 disabled.",
+    37: "Coprocessor 5 instruction when cp5 disabled.",
+    38: "Coprocessor 6 instruction when cp6 disabled.",
+    39: "Coprocessor 7 instruction when cp7 disabled.",
+}
 
 PLATFORMS = {
     "ESP8266": "lx106",
@@ -239,7 +239,8 @@ def print_stack(lines, resolver):
 
 def print_result(parser, resolver, full=True, stack_only=False):
     if not stack_only:
-        print('Exception: {} ({})'.format(parser.exception, EXCEPTIONS[parser.exception]))
+        exception_cause = EXCEPTIONS[parser.exception] if parser.exception in EXCEPTIONS else "unknown"
+        print('Exception: {} ({})'.format(parser.exception, exception_cause))
 
         print("")
         print_addr("epc1", parser.epc1, resolver)
