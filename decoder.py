@@ -145,10 +145,7 @@ class ExceptionDataParser(object):
                 continue
             elif state == 'stack' and self._parse_stack_end(line):
                 state = 'default'
-
-        if state != 'default':
-            print("ERROR: Parser not complete!")
-            sys.exit(1)
+                break
 
 
 class AddressResolver(object):
@@ -205,7 +202,8 @@ class AddressResolver(object):
 
 
 def print_addr(name, value, resolver):
-    print(f"{name + ':':9} {resolver.resolve_addr(value)}")
+    valfmt = resolver.resolve_addr(value) if value else '?'
+    print(f"{name + ':':9} {valfmt}")
 
 
 def print_stack_full(lines, resolver):
