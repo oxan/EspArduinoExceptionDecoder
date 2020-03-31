@@ -54,15 +54,14 @@ PLATFORMS = {
     "ESP32": "esp32"
 }
 
-EXCEPTION_REGEX = re.compile("^Exception \\((?P<exc>[0-9]*)\\):$")
-COUNTER_REGEX = re.compile('^epc1=(?P<epc1>0x[0-9a-f]+) epc2=(?P<epc2>0x[0-9a-f]+) epc3=(?P<epc3>0x[0-9a-f]+) '
-                           'excvaddr=(?P<excvaddr>0x[0-9a-f]+) depc=(?P<depc>0x[0-9a-f]+)$')
-CTX_REGEX = re.compile("^ctx: (?P<ctx>.+)$")
-POINTER_REGEX = re.compile('^sp: (?P<sp>[0-9a-f]+) end: (?P<end>[0-9a-f]+) offset: (?P<offset>[0-9a-f]+)$')
-STACK_BEGIN = '>>>stack>>>'
-STACK_END = '<<<stack<<<'
-STACK_REGEX = re.compile(
-    '^(?P<off>[0-9a-f]+):\W+(?P<c1>[0-9a-f]+) (?P<c2>[0-9a-f]+) (?P<c3>[0-9a-f]+) (?P<c4>[0-9a-f]+)(\W.*)?$')
+EXCEPTION_REGEX = re.compile(r"^Exception \((?P<exc>[0-9]*)\):$")
+COUNTER_REGEX   = re.compile(r"^epc1=(?P<epc1>0x[0-9a-f]+) epc2=(?P<epc2>0x[0-9a-f]+) epc3=(?P<epc3>0x[0-9a-f]+)"
+                              " excvaddr=(?P<excvaddr>0x[0-9a-f]+) depc=(?P<depc>0x[0-9a-f]+)$")
+CTX_REGEX       = re.compile(r"^ctx: (?P<ctx>.+)$")
+POINTER_REGEX   = re.compile(r"^sp: (?P<sp>[0-9a-f]+) end: (?P<end>[0-9a-f]+) offset: (?P<offset>[0-9a-f]+)$")
+STACK_BEGIN     = ">>>stack>>>"
+STACK_END       = "<<<stack<<<"
+STACK_REGEX     = re.compile(r"^(?P<off>[0-9a-f]+):\W+(?P<c1>[0-9a-f]+) (?P<c2>[0-9a-f]+) (?P<c3>[0-9a-f]+) (?P<c4>[0-9a-f]+)(\W.*)?$")
 
 StackLine = namedtuple("StackLine", ["offset", "content"])
 
@@ -89,8 +88,7 @@ class ExceptionDataParser(object):
         match = EXCEPTION_REGEX.match(line)
         if match is not None:
             self.exception = int(match.group('exc'))
-            return self._parse_counters
-        return self._parse_exception
+        return match is not None
 
     def _parse_counters(self, line):
         match = COUNTER_REGEX.match(line)
@@ -100,15 +98,13 @@ class ExceptionDataParser(object):
             self.epc3 = match.group("epc3")
             self.excvaddr = match.group("excvaddr")
             self.depc = match.group("depc")
-            return self._parse_ctx
-        return self._parse_counters
+        return match is not None
 
     def _parse_ctx(self, line):
         match = CTX_REGEX.match(line)
         if match is not None:
             self.ctx = match.group("ctx")
-            return self._parse_pointers
-        return self._parse_ctx
+        return match is not None
 
     def _parse_pointers(self, line):
         match = POINTER_REGEX.match(line)
@@ -116,35 +112,41 @@ class ExceptionDataParser(object):
             self.sp = match.group("sp")
             self.end = match.group("end")
             self.offset = match.group("offset")
-            return self._parse_stack_begin
-        return self._parse_pointers
+        return match is not None
 
     def _parse_stack_begin(self, line):
-        if line == STACK_BEGIN:
-            return self._parse_stack_line
-        return self._parse_stack_begin
+        return line == STACK_BEGIN
 
     def _parse_stack_line(self, line):
-        if line != STACK_END:
-            match = STACK_REGEX.match(line)
-            if match is not None:
-                self.stack.append(StackLine(offset=match.group("off"),
-                                            content=(match.group("c1"), match.group("c2"), match.group("c3"),
-                                                     match.group("c4"))))
-            return self._parse_stack_line
-        return None
+        match = STACK_REGEX.match(line)
+        if match is not None:
+            self.stack.append(StackLine(offset=match.group("off"),
+                                        content=(match.group("c1"), match.group("c2"), match.group("c3"), match.group("c4"))))
+        return match is not None
+
+    def _parse_stack_end(self, line):
+        return line == STACK_END
 
     def parse_file(self, file, stack_only=False):
-        func = self._parse_exception
-        if stack_only:
-            func = self._parse_stack_begin
+        state = 'default'
 
         for line in file:
-            func = func(line.strip())
-            if func is None:
-                break
+            line = line.strip()
+            if state == 'default' and self._parse_exception(line):
+                state = 'exception'
+            elif state == 'exception' and self._parse_counters(line):
+                continue
+            elif (state == 'exception' or stack_only) and self._parse_stack_begin(line):
+                state = 'stack'
+            elif (state == 'exception' or state == 'stack') and (self._parse_ctx(line) or self._parse_pointers(line)):
+                # these two can be either before or in the stack, depending on the Arduino framework version
+                continue
+            elif state == 'stack' and self._parse_stack_line(line):
+                continue
+            elif state == 'stack' and self._parse_stack_end(line):
+                state = 'default'
 
-        if func is not None:
+        if state != 'default':
             print("ERROR: Parser not complete!")
             sys.exit(1)
 
