@@ -8,7 +8,7 @@ Python script to decode ESP8266 stacktraces and exceptions.
 ## Usage:
 
 ```
-usage: decoder.py [-h] [-p {ESP8266,ESP32}] [-t TOOLCHAIN] -e ELF [-f] [-s]
+usage: decoder.py [-h] [-p {ESP8266,ESP32}] [-t TOOLCHAIN] -e ELF [-f]
                   file
 
 Decode ESP stacktraces.
@@ -24,7 +24,6 @@ optional arguments:
                         path to the Xtensa toolchain
   -e ELF, --elf ELF     path to ELF file
   -f, --full            print full stack dump
-  -s, --stack-only      decode only a stacktrace
 ```
 
 The toolchain is the path to your Xtensa toolchain. If you use [PlatformIO](http://platformio.org/) it should be `~/.platformio/packages/toolchain-xtensa` for the ESP8266 and `~/.platformio/packages/toolchain-xtensa32` for the ESP32.

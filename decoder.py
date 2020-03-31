@@ -127,7 +127,7 @@ class ExceptionDataParser(object):
     def _parse_stack_end(self, line):
         return line == STACK_END
 
-    def parse_file(self, file, stack_only=False):
+    def parse_file(self, file):
         state = 'default'
 
         for line in file:
@@ -136,15 +136,15 @@ class ExceptionDataParser(object):
                 state = 'exception'
             elif state == 'exception' and self._parse_counters(line):
                 continue
-            elif (state == 'exception' or stack_only) and self._parse_stack_begin(line):
-                state = 'stack'
-            elif (state == 'exception' or state == 'stack') and (self._parse_ctx(line) or self._parse_pointers(line)):
+            elif state in ('exception', 'stack') and (self._parse_ctx(line) or self._parse_pointers(line)):
                 # these two used to be before the stack marker, but are after it since Arduino commit 2f4380777
                 continue
+            elif self._parse_stack_begin(line):
+                state = 'stack'
             elif state == 'stack' and self._parse_stack_line(line):
                 continue
             elif state == 'stack' and self._parse_stack_end(line):
-                return True
+                    return True
 
         return state != 'default'
 
@@ -224,8 +224,8 @@ def print_stack(lines, resolver):
                 print(out)
 
 
-def print_result(parser, resolver, full=True, stack_only=False):
-    if not stack_only:
+def print_result(parser, resolver, full=True):
+    if parser.exception is not None:
         exception_cause = EXCEPTIONS[parser.exception] if parser.exception in EXCEPTIONS else "unknown"
         print(f"Exception: {parser.exception} ({exception_cause})")
         print("")
@@ -237,9 +237,11 @@ def print_result(parser, resolver, full=True, stack_only=False):
         print_addr("depc",     parser.depc,     resolver)
         print("")
 
-        print(f"{'ctx':9} {parser.ctx}")
+    if parser.ctx is not None:
+        print(f"{'ctx:':9} {parser.ctx}")
         print("")
 
+    if any((parser.sp, parser.end, parser.offset)):
         print_addr("sp", parser.sp, resolver)
         print_addr("end", parser.end, resolver)
         print_addr("offset", parser.offset, resolver)
@@ -253,7 +255,7 @@ def print_result(parser, resolver, full=True, stack_only=False):
     print("")
 
 
-def main(toolchain_path, platform, elf_path, exception_input=None, stack_only=False):
+def main(toolchain_path, platform, elf_path, exception_input=None):
     if os.path.exists(toolchain_path) and os.path.isfile(toolchain_path):
         addr2line = toolchain_path
     else:
@@ -274,11 +276,11 @@ def main(toolchain_path, platform, elf_path, exception_input=None, stack_only=Fa
     resolver = AddressResolver(addr2line, elf_path)
     while True:
         parser = ExceptionDataParser()
-        if not parser.parse_file(input_handle, stack_only):
+        if not parser.parse_file(input_handle):
             break
 
         resolver.fill(parser)
-        print_result(parser, resolver, args.full, args.stack_only)
+        print_result(parser, resolver, args.full)
 
 
 def parse_args():
@@ -290,7 +292,6 @@ def parse_args():
                         default="~/.platformio/packages/toolchain-xtensa/")
     parser.add_argument("-e", "--elf", help="path to ELF file", required=True)
     parser.add_argument("-f", "--full", help="print full stack dump", action="store_true")
-    parser.add_argument("-s", "--stack-only", help="decode only a stacktrace", action="store_true")
     parser.add_argument("file", help="file to read exception data from ('-' for stdin)", default="-")
 
     return parser.parse_args()
@@ -306,4 +307,4 @@ if __name__ == "__main__":
     else:
         exception_input = os.path.abspath(os.path.expanduser(args.file))
 
-    main(toolchain_path, args.platform, elf_path, exception_input, args.stack_only)
+    main(toolchain_path, args.platform, elf_path, exception_input)
