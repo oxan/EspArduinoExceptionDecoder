@@ -252,17 +252,41 @@ def print_result(parser, resolver, full=True, stack_only=False):
         print_stack(parser.stack, resolver)
 
 
+def main(toolchain_path, platform, elf_path, exception_input=None, stack_only=False):
+    addr2line = os.path.join(toolchain_path, "bin/xtensa-" + PLATFORMS[platform] + "-elf-addr2line")
+    if not os.path.exists(addr2line):
+        raise FileNotFoundError(f"addr2line not found at '{addr2line}'")
+
+    if not os.path.exists(elf_path):
+        raise FileNotFoundError(f"ELF file not found at '{elf_path}'")
+
+    if exception_input:
+        if not os.path.exists(exception_input):
+            raise FileNotFoundError(f"Exception file not found at '{exception_input}'")
+        input_handle = open(exception_input, "r")
+    else:
+        input_handle = sys.stdin
+
+    parser = ExceptionDataParser()
+    resolver = AddressResolver(addr2line, elf_path)
+
+    parser.parse_file(input_handle, stack_only)
+    resolver.fill(parser)
+
+    print_result(parser, resolver, args.full, args.stack_only)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="decode ESP Stacktraces.")
 
-    parser.add_argument("-p", "--platform", help="The platform to decode from", choices=PLATFORMS.keys(),
+    parser.add_argument("-p", "--platform", help="The platform to decode for", choices=PLATFORMS.keys(),
                         default="ESP8266")
-    parser.add_argument("-t", "--tool", help="Path to the xtensa toolchain",
+    parser.add_argument("-t", "--toolchain", help="Path to the Xtensa toolchain",
                         default="~/.platformio/packages/toolchain-xtensa/")
-    parser.add_argument("-e", "--elf", help="path to elf file", required=True)
+    parser.add_argument("-e", "--elf", help="Path to ELF file", required=True)
     parser.add_argument("-f", "--full", help="Print full stack dump", action="store_true")
-    parser.add_argument("-s", "--stack_only", help="Decode only a stractrace", action="store_true")
-    parser.add_argument("file", help="The file to read the exception data from ('-' for STDIN)", default="-")
+    parser.add_argument("-s", "--stack-only", help="Decode only a stacktrace", action="store_true")
+    parser.add_argument("file", help="The file to read the exception data from ('-' for stdin)", default="-")
 
     return parser.parse_args()
 
@@ -270,27 +294,11 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
+    toolchain_path = os.path.abspath(os.path.expanduser(args.toolchain))
+    elf_path = os.path.abspath(os.path.expanduser(args.elf))
     if args.file == "-":
-        file = sys.stdin
+        exception_input = None
     else:
-        if not os.path.exists(args.file):
-            print("ERROR: file " + args.file + " not found")
-            sys.exit(1)
-        file = open(args.file, "r")
+        exception_input = os.path.abspath(os.path.expanduser(args.file))
 
-    addr2line = os.path.join(os.path.abspath(os.path.expanduser(args.tool)),
-                             "bin/xtensa-" + PLATFORMS[args.platform] + "-elf-addr2line")
-    if not os.path.exists(addr2line):
-        print("ERROR: addr2line not found (" + addr2line + ")")
-
-    elf_file = os.path.abspath(os.path.expanduser(args.elf))
-    if not os.path.exists(elf_file):
-        print("ERROR: elf file not found (" + elf_file + ")")
-
-    parser = ExceptionDataParser()
-    resolver = AddressResolver(addr2line, elf_file)
-
-    parser.parse_file(file, args.stack_only)
-    resolver.fill(parser)
-
-    print_result(parser, resolver, args.full, args.stack_only)
+    main(toolchain_path, args.platform, elf_path, exception_input, args.stack_only)
