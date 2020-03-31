@@ -157,11 +157,7 @@ class AddressResolver(object):
 
     def _lookup(self, addresses):
         cmd = [self._tool, "-aipfC", "-e", self._elf] + [addr for addr in addresses if addr is not None]
-
-        if sys.version_info[0] < 3:
-            output = subprocess.check_output(cmd)
-        else:
-            output = subprocess.check_output(cmd, encoding="utf-8")
+        output = subprocess.check_output(cmd, encoding="utf-8")
 
         line_regex = re.compile("^(?P<addr>[0-9a-fx]+): (?P<result>.+)$")
 
@@ -171,12 +167,12 @@ class AddressResolver(object):
             match = line_regex.match(line)
 
             if match is None:
-                if last is not None and line.startswith('(inlined by)'):
-                    line = line [12:].strip()
-                    self._address_map[last] += ("\n  \-> inlined by: " + line)
+                if last is not None and line.startswith("(inlined by)"):
+                    line = line[12:].strip()
+                    self._address_map[last] += f"\n  \-> inlined by: {line}"
                 continue
 
-            if match.group("result") == '?? ??:0':
+            if match.group("result") == "?? ??:0":
                 continue
 
             self._address_map[match.group("addr")] = match.group("result")
@@ -193,26 +189,17 @@ class AddressResolver(object):
         if addr.startswith("0x"):
             addr = addr[2:]
 
-        fill = "0" * (8 - len(addr))
-        return "0x" + fill + addr
+        return f"0x{addr:0>8}"
 
-    def resolve_addr(self, addr):
-        out = self._sanitize_addr(addr)
-
-        if out in self._address_map:
-            out += ": " + self._address_map[out]
-
-        return out
-
-    def resolve_stack_addr(self, addr, full=True):
+    def resolve_addr(self, addr, only_found=False, full=False):
         addr = self._sanitize_addr(addr)
         if addr in self._address_map:
-            return addr + ": " + self._address_map[addr]
+            return f"{addr}: {self._address_map[addr]}"
 
         if full:
-            return "[DATA (0x" + addr + ")]"
+            return f"[DATA (0x{addr})]"
 
-        return None
+        return addr if not only_found else None
 
 
 def print_addr(name, value, resolver):
@@ -224,14 +211,14 @@ def print_stack_full(lines, resolver):
     for line in lines:
         print(f"{line.offset}:")
         for content in line.content:
-            print(f"  {resolver.resolve_stack_addr(content)}")
+            print(f"  {resolver.resolve_addr(content, full=True)}")
 
 
 def print_stack(lines, resolver):
     print("stack:")
     for line in lines:
         for content in line.content:
-            out = resolver.resolve_stack_addr(content, full=False)
+            out = resolver.resolve_addr(content, only_found=True)
             if out:
                 print(out)
 
