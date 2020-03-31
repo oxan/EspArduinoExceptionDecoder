@@ -191,15 +191,16 @@ class AddressResolver(object):
 
         return f"0x{addr:0>8}"
 
-    def resolve_addr(self, addr, only_found=False, full=False):
+    def is_instruction_addr(self, addr):
+        # instructions are generally mapped at 0x40XXXXXXh, see
+        # https://github.com/esp8266/esp8266-wiki/wiki/Memory-Map
+        return self._sanitize_addr(addr).startswith("0x40")
+
+    def resolve_addr(self, addr):
         addr = self._sanitize_addr(addr)
         if addr in self._address_map:
             return f"{addr}: {self._address_map[addr]}"
-
-        if full:
-            return f"[DATA (0x{addr})]"
-
-        return addr if not only_found else None
+        return addr
 
 
 def print_addr(name, value, resolver):
@@ -211,17 +212,16 @@ def print_stack_full(lines, resolver):
     print("stack:")
     for line in lines:
         print(f"{line.offset}:")
-        for content in line.content:
-            print(f"  {resolver.resolve_addr(content, full=True)}")
+        for addr in line.content:
+            print(f"  {resolver.resolve_addr(addr)}")
 
 
 def print_stack(lines, resolver):
     print("stack:")
     for line in lines:
-        for content in line.content:
-            out = resolver.resolve_addr(content, only_found=True)
-            if out:
-                print(out)
+        for addr in line.content:
+            if resolver.is_instruction_addr(addr):
+                print(resolver.resolve_addr(addr))
 
 
 def print_result(parser, resolver, full=True):
@@ -293,7 +293,6 @@ def parse_args():
     parser.add_argument("-e", "--elf", help="path to ELF file", required=True)
     parser.add_argument("-f", "--full", help="print full stack dump", action="store_true")
     parser.add_argument("file", help="file to read exception data from ('-' for stdin)", default="-")
-
     return parser.parse_args()
 
 
