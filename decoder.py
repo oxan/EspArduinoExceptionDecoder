@@ -253,9 +253,12 @@ def print_result(parser, resolver, full=True, stack_only=False):
 
 
 def main(toolchain_path, platform, elf_path, exception_input=None, stack_only=False):
-    addr2line = os.path.join(toolchain_path, "bin/xtensa-" + PLATFORMS[platform] + "-elf-addr2line")
-    if not os.path.exists(addr2line):
-        raise FileNotFoundError(f"addr2line not found at '{addr2line}'")
+    if os.path.exists(toolchain_path) and os.path.isfile(toolchain_path):
+        addr2line = toolchain_path
+    else:
+        addr2line = os.path.join(toolchain_path, "bin/xtensa-" + PLATFORMS[platform] + "-elf-addr2line")
+        if not os.path.exists(addr2line):
+            raise FileNotFoundError(f"addr2line not found at '{addr2line}'")
 
     if not os.path.exists(elf_path):
         raise FileNotFoundError(f"ELF file not found at '{elf_path}'")
