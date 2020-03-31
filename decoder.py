@@ -144,8 +144,9 @@ class ExceptionDataParser(object):
             elif state == 'stack' and self._parse_stack_line(line):
                 continue
             elif state == 'stack' and self._parse_stack_end(line):
-                state = 'default'
-                break
+                return True
+
+        return state != 'default'
 
 
 class AddressResolver(object):
@@ -249,6 +250,8 @@ def print_result(parser, resolver, full=True, stack_only=False):
     else:
         print_stack(parser.stack, resolver)
 
+    print("")
+
 
 def main(toolchain_path, platform, elf_path, exception_input=None, stack_only=False):
     if os.path.exists(toolchain_path) and os.path.isfile(toolchain_path):
@@ -268,13 +271,14 @@ def main(toolchain_path, platform, elf_path, exception_input=None, stack_only=Fa
     else:
         input_handle = sys.stdin
 
-    parser = ExceptionDataParser()
     resolver = AddressResolver(addr2line, elf_path)
+    while True:
+        parser = ExceptionDataParser()
+        if not parser.parse_file(input_handle, stack_only):
+            break
 
-    parser.parse_file(input_handle, stack_only)
-    resolver.fill(parser)
-
-    print_result(parser, resolver, args.full, args.stack_only)
+        resolver.fill(parser)
+        print_result(parser, resolver, args.full, args.stack_only)
 
 
 def parse_args():
