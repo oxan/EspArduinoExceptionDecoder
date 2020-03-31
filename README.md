@@ -1,56 +1,48 @@
 # EspArduinoExceptionDecoder
+Python script to decode ESP8266 stacktraces and exceptions.
 
-Python Script to decode ESP8266 Exceptions.
-
-
-## License
-
-GPL 3.0
-
+## Dependencies:
+* Python 3
+* The Xtensa toolchain for your ESP
 
 ## Usage:
 
 ```
-usage: decoder.py [-h] [-p {ESP8266,ESP32}] [-t TOOL] -e ELF [-f] file
+usage: decoder.py [-h] [-p {ESP8266,ESP32}] [-t TOOLCHAIN] -e ELF [-f] [-s]
+                  file
 
-decode ESP Stacktraces.
+Decode ESP stacktraces.
 
 positional arguments:
-  file                  The file to read the exception data from ('-' for
-                        STDIN)
+  file                  file to read exception data from ('-' for stdin)
 
 optional arguments:
   -h, --help            show this help message and exit
   -p {ESP8266,ESP32}, --platform {ESP8266,ESP32}
-                        The platform to decode from
-  -t TOOL, --tool TOOL  Path to the xtensa toolchain
-  -e ELF, --elf ELF     path to elf file
-  -f, --full            Print full stack dump
+                        platform to decode for
+  -t TOOLCHAIN, --toolchain TOOLCHAIN
+                        path to the Xtensa toolchain
+  -e ELF, --elf ELF     path to ELF file
+  -f, --full            print full stack dump
+  -s, --stack-only      decode only a stacktrace
 ```
 
-The tool is the path to your xtensa toolchain. If you use [PlatformIO](http://platformio.org/) it should be `~/.platformio/packages/toolchain-xtensa` for the ESP8266 and `~/.platformio/packages/toolchain-xtensa32` for the ESP32.
+The toolchain is the path to your Xtensa toolchain. If you use [PlatformIO](http://platformio.org/) it should be `~/.platformio/packages/toolchain-xtensa` for the ESP8266 and `~/.platformio/packages/toolchain-xtensa32` for the ESP32.
 
-The elf path is the path to your built elf binary. On PlatformIO it is located at `<project-dir>/.pioenvs/<environment-name>/firmware.elf`.
-
-
-## Dependencies:
-
-* python 3 or 2.7
-* The xtensa toolchain for your ESP
-
+The ELF path is the path to your built ELF binary. On PlatformIO it is located at `<project-dir>/.pioenvs/<environment-name>/firmware.elf`.
 
 ## Example:
-
 Given you have the following stacktrace from the ESP:
 
 ```
 Exception (3):
 epc1=0x4022ca68 epc2=0x00000000 epc3=0x00000000 excvaddr=0x4026b579 depc=0x00000000
 
+>>>stack>>>
+
 ctx: cont
 sp: 3fff2250 end: 3fff2590 offset: 01a0
 
->>>stack>>>
 3fff23f0:  00000000 00000000 3fff5a50 4020d548
 3fff2400:  00000003 3fff13c4 3fff5a50 4020ea3c
 3fff2410:  3fff4bb4 00000066 00000000 40229598
@@ -80,10 +72,10 @@ sp: 3fff2250 end: 3fff2590 offset: 01a0
 <<<stack<<<
 ```
 
-You can dump it in a file called `myStackTrace.txt` and run the `decode.py` script:
+You can dump it in a file called `myStackTrace.txt` and run the `decoder.py` script:
 
 ```
-$ <...>/decoder.py -e .pioenvs/d1_mini/firmware.elf myStackTrace.txt1
+$ <...>/decoder.py -e .pioenvs/d1_mini/firmware.elf myStackTrace.txt
 ```
 
 This prints the processed stacktrace:
@@ -97,7 +89,7 @@ epc3:     0x00000000
 excvaddr: 0x4026b579: chip_v6_unset_chanfreq at ??:?
 depc:     0x00000000
 
-ctx: cont
+ctx:      cont
 
 sp:       0x3fff2250
 end:      0x3fff2590
@@ -135,6 +127,8 @@ stack:
 0x40204eb0: cont_norm at cont.o:?
 ```
 
+## License
+GPL-3.0
 
 ## Acknowledgement
 This is heavily inspired by [EspExceptionDecoder](https://github.com/me-no-dev/EspExceptionDecoder).

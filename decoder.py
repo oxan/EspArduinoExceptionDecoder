@@ -139,7 +139,7 @@ class ExceptionDataParser(object):
             elif (state == 'exception' or stack_only) and self._parse_stack_begin(line):
                 state = 'stack'
             elif (state == 'exception' or state == 'stack') and (self._parse_ctx(line) or self._parse_pointers(line)):
-                # these two can be either before or in the stack, depending on the Arduino framework version
+                # these two used to be before the stack marker, but are after it since Arduino commit 2f4380777
                 continue
             elif state == 'stack' and self._parse_stack_line(line):
                 continue
@@ -280,16 +280,16 @@ def main(toolchain_path, platform, elf_path, exception_input=None, stack_only=Fa
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="decode ESP Stacktraces.")
+    parser = argparse.ArgumentParser(description="Decode ESP stacktraces.")
 
-    parser.add_argument("-p", "--platform", help="The platform to decode for", choices=PLATFORMS.keys(),
+    parser.add_argument("-p", "--platform", help="platform to decode for", choices=PLATFORMS.keys(),
                         default="ESP8266")
-    parser.add_argument("-t", "--toolchain", help="Path to the Xtensa toolchain",
+    parser.add_argument("-t", "--toolchain", help="path to the Xtensa toolchain",
                         default="~/.platformio/packages/toolchain-xtensa/")
-    parser.add_argument("-e", "--elf", help="Path to ELF file", required=True)
-    parser.add_argument("-f", "--full", help="Print full stack dump", action="store_true")
-    parser.add_argument("-s", "--stack-only", help="Decode only a stacktrace", action="store_true")
-    parser.add_argument("file", help="The file to read the exception data from ('-' for stdin)", default="-")
+    parser.add_argument("-e", "--elf", help="path to ELF file", required=True)
+    parser.add_argument("-f", "--full", help="print full stack dump", action="store_true")
+    parser.add_argument("-s", "--stack-only", help="decode only a stacktrace", action="store_true")
+    parser.add_argument("file", help="file to read exception data from ('-' for stdin)", default="-")
 
     return parser.parse_args()
 
